@@ -1,0 +1,51 @@
+#define DAC_PORT PORTD   // Register for controlling DAC output
+#define DAC_DDR  DDRD    // Data Direction Register
+
+#define OPAMP_OUTPUT_PIN A1  // Pin to measure the opamp output (LED Driver Output)
+
+// Define DAC voltage range
+#define VCTRL_MAX 4.68  // Maximum expected DAC output in volts
+#define RS 500.0  // Resistor value in Ohms for LED current measurement
+
+// Defined values from the problem statement
+const int portValues[] = {0, 12, 24, 36, 48, 60};
+const int numSteps = 6;  // Number of steps in the progression
+
+void setup() {
+  Serial.begin(9600);  
+  DAC_DDR |= 0b11111100;  // Set Pins D2-D7 as OUTPUT (for B5-B0)
+
+  Serial.println("PORT Write | Expected VCTRL (V) | Measured Opamp Output (V) | ILED (mA)");
+  Serial.println("--------------------------------------------------------------------------");
+}
+
+void loop() {
+  for (int i = 0; i < numSteps; i++) {  // Iterate through the 5 defined values
+    int value = portValues[i];  // Use only the allowed PORT values
+    DAC_PORT = (DAC_PORT & 0b00000011) | (value << 2);  // Update DAC Output
+    
+    delay(1000);  // 1s delay ensures visible LED brightness change
+
+    // Calculate expected VCTRL
+    float expected_vctrl = (value / 60.0) * VCTRL_MAX;
+
+    // Read opamp output from A1
+    int analogValue = analogRead(OPAMP_OUTPUT_PIN);  
+    float measured_opamp_output = (analogValue * 5.0) / 1023.0;  // Convert ADC to voltage
+
+    // Calculate LED current using Ohm's Law
+    float iLed_mA = (measured_opamp_output / RS) * 1000.0;  // Convert to mA
+
+    // Print the results
+    Serial.print(value);
+    Serial.print("         | ");
+    Serial.print(expected_vctrl, 3);
+    Serial.print(" V        | ");
+    Serial.print(measured_opamp_output, 3);
+    Serial.print(" V        | ");
+    Serial.print(iLed_mA, 3);
+    Serial.println(" mA");
+  }
+  
+  delay(3000);  // Longer delay before repeating the cycle
+}
